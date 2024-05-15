@@ -1,0 +1,29 @@
+{
+  "name": "@jco-digital/jutils",
+  "version": "0.1.0",
+  "description": "JCORE Utils (jUtils) is a collection of helper scripts",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "esbuild src/jUtils.ts --bundle --minify --outfile=dist/index.js --platform=browser --format=iife --target=es2022",
+    "watch": "pnpm run build --watch",
+    "format": "prettier --write src/**/*.ts",
+    "lint": "prettier --check src/**/*.ts",
+    "prepublishOnly": "pnpm run build",
+    "preversion": "pnpm run lint && pnpm run format && pnpm run build",
+    "postversion": "git push && git push --tags && pnpm publish --access public"
+  },
+  "dependencies": {
+    "prettier": "^3.2.5",
+    "esbuild": "^0.21.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jco-digital/jcore-utils.git"
+  },
+  "author": "JCO Digital <support@jco.fi>",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/jco-digital/jcore-utils/issues"
+  },
+  "homepage": "https://github.com/jco-digital/jcore-utils#readme"
+}
