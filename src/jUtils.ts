@@ -69,6 +69,8 @@ const getScroll = () => {
   document
     .querySelectorAll("[data-jscroll='true']")
     .forEach((scroll: HTMLElement) => {
+      scroll.classList.add("scrollActive");
+      scroll.style.setProperty("--jutils-height", scroll.clientHeight + "px");
       const threshold = scroll.dataset.threshold
         ? scroll.dataset.threshold
         : 75;
