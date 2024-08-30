@@ -8,6 +8,7 @@
     "watch": "pnpm run build --watch",
     "format": "prettier --write src/**/*.ts",
     "lint": "prettier --check src/**/*.ts",
+    "devrelease": "pnpm version prerelease --preid=dev",
     "prepublishOnly": "pnpm run build",
     "preversion": "pnpm run lint && pnpm run build",
     "postversion": "git push && git push --tags && pnpm publish --access public"
