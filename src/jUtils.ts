@@ -307,7 +307,7 @@ const toggleHandler = (toggleItem, forcedState = undefined) => {
           item.targets,
           item.targetClass,
           false,
-          item.timeout,
+          item.timeout
         );
       }
     });
@@ -317,7 +317,7 @@ const toggleHandler = (toggleItem, forcedState = undefined) => {
     toggleItem.targets,
     toggleItem.targetClass,
     activate,
-    toggleItem.timeout,
+    toggleItem.timeout
   );
 };
 
@@ -392,6 +392,16 @@ const getScrollPosition = () => {
   if (bodyTop > elementTop) return bodyTop;
   return elementTop;
 };
+
+export function debounce(func: Function, timeout = 300) {
+  let timer: number;
+  return (...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func.apply(this, args);
+    }, timeout);
+  };
+}
 
 window.addEventListener("resize", onResize);
 window.addEventListener("scroll", onScroll);
