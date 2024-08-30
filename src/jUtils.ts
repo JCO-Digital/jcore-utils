@@ -307,7 +307,7 @@ const toggleHandler = (toggleItem, forcedState = undefined) => {
           item.targets,
           item.targetClass,
           false,
-          item.timeout
+          item.timeout,
         );
       }
     });
@@ -317,7 +317,7 @@ const toggleHandler = (toggleItem, forcedState = undefined) => {
     toggleItem.targets,
     toggleItem.targetClass,
     activate,
-    toggleItem.timeout
+    toggleItem.timeout,
   );
 };
 
