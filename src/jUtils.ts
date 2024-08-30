@@ -1,8 +1,48 @@
-const jcoreSticky = [];
-const jcoreScroll = [];
-const jcoreToggle = [];
-const jcoreFocus = [];
-const jcoreScrollPos = {
+interface StickyItem {
+  element: HTMLElement;
+  spacer: HTMLElement;
+  showSpacer: boolean;
+  posY: number;
+  posX: number;
+  height: number;
+  width: number;
+  active: boolean;
+}
+
+interface ScrollItem {
+  element: HTMLElement;
+  threshold: number;
+  scrollStart: number;
+  loading: boolean;
+}
+
+interface ToggleItem {
+  element: HTMLElement;
+  targets: HTMLElement[];
+  targetClass: string;
+  timeout: number;
+  group: string;
+}
+
+interface FocusItem {
+  target: HTMLElement;
+  source: HTMLElement[];
+  active: boolean;
+  timeout: ReturnType<typeof setTimeout> | null;
+}
+
+interface ScrollPos {
+  current: number;
+  last: number;
+  up: number | null;
+  down: number | null;
+}
+
+const jcoreSticky: StickyItem[] = [];
+const jcoreScroll: ScrollItem[] = [];
+const jcoreToggle: ToggleItem[] = [];
+const jcoreFocus: FocusItem[] = [];
+const jcoreScrollPos: ScrollPos = {
   current: 0,
   last: 0,
   up: null,
@@ -18,76 +58,44 @@ const menuInit = () => {
   getTrigger();
   getFocus();
   onResize();
-  searchBar();
-};
-const searchBar = () => {
-  // Searchbar
-  // This adds a click event to any button with the class toggle-search
-
-  const searchButtons = document.getElementsByClassName("toggle-search");
-  if (searchButtons) {
-    function searchToggle() {
-      document.getElementById("menu-searchbar").classList.toggle("hidden");
-    }
-
-    function searchbarStatus() {
-      this.classList.toggle("searchbar-open");
-    }
-
-    for (let i = 0; i < searchButtons.length; i++) {
-      searchButtons[i].addEventListener("click", searchToggle, false);
-      searchButtons[i].addEventListener("click", searchbarStatus, false);
-    }
-  }
-
-  // End of searchbar code
 };
 
 const getSticky = () => {
-  document
-    .querySelectorAll("[data-jsticky]")
-    .forEach((sticky: HTMLElement, i) => {
-      if (sticky.dataset.jsticky !== "false") {
-        const parentElement = sticky.parentNode;
-        const spacer = document.createElement("div");
-        spacer.id = "spacer_" + i;
-        parentElement.insertBefore(spacer, sticky);
-        jcoreSticky.push({
-          element: sticky,
-          spacer: spacer,
-          showSpacer: sticky.dataset.jsticky !== "no-spacer",
-          posY: 0,
-          posX: 0,
-          height: 0,
-          width: 0,
-          active: false,
-        });
-      }
-    });
+  getHTMLElements("[data-jsticky]").forEach((sticky, i) => {
+    if (sticky.dataset.jsticky !== "false") {
+      const parentElement = sticky.parentNode;
+      const spacer = document.createElement("div");
+      spacer.id = "spacer_" + i;
+      parentElement.insertBefore(spacer, sticky);
+      jcoreSticky.push({
+        element: sticky,
+        spacer: spacer,
+        showSpacer: sticky.dataset.jsticky !== "no-spacer",
+        posY: 0,
+        posX: 0,
+        height: 0,
+        width: 0,
+        active: false,
+      });
+    }
+  });
 };
 const getScroll = () => {
-  document
-    .querySelectorAll("[data-jscroll='true']")
-    .forEach((scroll: HTMLElement) => {
-      scroll.classList.add("scrollActive");
-      scroll.style.setProperty("--jutils-height", scroll.clientHeight + "px");
-      const threshold = scroll.dataset.threshold
-        ? scroll.dataset.threshold
-        : 75;
-      const scrollStart = scroll.dataset.scrollstart
-        ? scroll.dataset.scrollstart
-        : threshold;
-      addClass(scroll, "jcoreLoading");
-      jcoreScroll.push({
-        element: scroll,
-        threshold: threshold,
-        scrollStart: scrollStart,
-        loading: true,
-      });
+  getHTMLElements("[data-jscroll='true']").forEach((scroll) => {
+    scroll.classList.add("scrollActive");
+    const threshold = getDataValue(scroll.dataset.threshold, 75);
+    const scrollStart = getDataValue(scroll.dataset.scrollstart, threshold);
+    scroll.classList.add("jcoreLoading");
+    jcoreScroll.push({
+      element: scroll,
+      threshold: threshold,
+      scrollStart: scrollStart,
+      loading: true,
     });
+  });
 };
 const getToggle = () => {
-  document.querySelectorAll("[data-jtoggle]").forEach((toggle: HTMLElement) => {
+  getHTMLElements("[data-jtoggle]").forEach((toggle) => {
     const targetClass = toggle.dataset.class ? toggle.dataset.class : "toggle";
     const timeout = toggle.dataset.timeout ? toggle.dataset.timeout : 200;
     const group = toggle.dataset.group ? toggle.dataset.group : null;
@@ -99,7 +107,7 @@ const getToggle = () => {
       .filter((t) => {
         return t !== null;
       });
-    const toggleItem = {
+    const toggleItem: ToggleItem = {
       element: toggle,
       targets,
       targetClass,
@@ -107,7 +115,12 @@ const getToggle = () => {
       group,
     };
     jcoreToggle.push(toggleItem);
-    updateClass(toggle, targets, targetClass, hasClass(toggle, targetClass));
+    updateClass(
+      toggle,
+      targets,
+      targetClass,
+      toggle.classList.contains(targetClass)
+    );
     if ("jhover" in toggle.dataset) {
       toggle.addEventListener("mouseenter", () => {
         toggleHandler(toggleItem, true);
@@ -125,27 +138,25 @@ const getToggle = () => {
 };
 
 const getTrigger = () => {
-  document
-    .querySelectorAll("[data-jtrigger]")
-    .forEach((trigger: HTMLElement) => {
-      const targets = trigger.dataset.jtrigger
-        .split(" ")
-        .map((t) => {
-          return document.getElementById(t);
-        })
-        .filter((t) => {
-          return t !== null;
-        });
-      trigger.addEventListener("click", () => {
-        targets.forEach((target) => {
-          target.click();
-        });
+  getHTMLElements("[data-jtrigger]").forEach((trigger) => {
+    const targets = trigger.dataset.jtrigger
+      .split(" ")
+      .map((t) => {
+        return document.getElementById(t);
+      })
+      .filter((t) => {
+        return t !== null;
+      });
+    trigger.addEventListener("click", () => {
+      targets.forEach((target) => {
+        target.click();
       });
     });
+  });
 };
 
 const getFocus = () => {
-  document.querySelectorAll("[data-jfocus]").forEach((element: HTMLElement) => {
+  getHTMLElements("[data-jfocus]").forEach((element) => {
     element.dataset.jfocus.split(",").forEach((id) => {
       let target = null;
       if (id === "parent") {
@@ -179,14 +190,14 @@ const setFocus = () => {
   jcoreFocus.forEach((focus) => {
     focus.source.forEach((source) => {
       source.addEventListener("focus", () => {
-        addClass(focus.target, "focus");
+        focus.target.classList.add("focus");
         focus.active = true;
       });
       source.addEventListener("blur", () => {
         focus.active = false;
         focus.timeout = setTimeout(() => {
           if (!focus.active) {
-            removeClass(focus.target, "focus");
+            focus.target.classList.remove("focus");
           }
         }, 50);
       });
@@ -220,6 +231,7 @@ const scrollHandler = () => {
 };
 // Update info about menu placement on resize
 const onResize = () => {
+  console.debug("Resize");
   jcoreSticky.forEach((sticky) => {
     const pos = getPos(sticky.spacer);
     sticky.posY = pos.y;
@@ -245,28 +257,32 @@ const checkStickyPos = () => {
 const checkScrollPos = () => {
   // Check Scroll
   jcoreScroll.forEach((scroll) => {
+    scroll.element.style.setProperty(
+      "--jutils-height",
+      scroll.element.clientHeight + "px"
+    );
     if (jcoreScrollPos.current < scroll.scrollStart) {
-      addClass(scroll.element, "scrollTop");
+      scroll.element.classList.add("scrollTop");
     } else {
-      removeClass(scroll.element, "scrollTop");
+      scroll.element.classList.remove("scrollTop");
     }
     if (
       jcoreScrollPos.up !== null &&
       jcoreScrollPos.up - jcoreScrollPos.current > scroll.threshold
     ) {
-      addClass(scroll.element, "scrollUp");
-      removeClass(scroll.element, "scrollDown");
+      scroll.element.classList.add("scrollUp");
+      scroll.element.classList.remove("scrollDown");
     }
     if (
       jcoreScrollPos.down !== null &&
       jcoreScrollPos.current - jcoreScrollPos.down > scroll.threshold
     ) {
-      addClass(scroll.element, "scrollDown");
-      removeClass(scroll.element, "scrollUp");
+      scroll.element.classList.add("scrollDown");
+      scroll.element.classList.remove("scrollUp");
     }
     if (scroll.loading) {
       setTimeout(() => {
-        removeClass(scroll.element, "jcoreLoading");
+        scroll.element.classList.remove("jcoreLoading");
       }, 100);
       scroll.loading = false;
     }
@@ -289,17 +305,20 @@ const getPos = (el) => {
 };
 
 // Handle the toggle action
-const toggleHandler = (toggleItem, forcedState = undefined) => {
+const toggleHandler = (
+  toggleItem,
+  forcedState: boolean | undefined = undefined
+) => {
   const activate =
     forcedState === undefined
-      ? !hasClass(toggleItem.element, toggleItem.targetClass)
+      ? !toggleItem.element.classList.contains(toggleItem.targetClass)
       : forcedState;
   if (activate && toggleItem.group) {
     // If item has a group set, look for all other group elements.
     jcoreToggle.forEach((item) => {
       if (
         item.group === toggleItem.group &&
-        hasClass(item.element, item.targetClass)
+        item.element.classList.contains(item.targetClass)
       ) {
         // Deactivate all active group elements.
         updateClass(
@@ -307,7 +326,7 @@ const toggleHandler = (toggleItem, forcedState = undefined) => {
           item.targets,
           item.targetClass,
           false,
-          item.timeout,
+          item.timeout
         );
       }
     });
@@ -317,7 +336,7 @@ const toggleHandler = (toggleItem, forcedState = undefined) => {
     toggleItem.targets,
     toggleItem.targetClass,
     activate,
-    toggleItem.timeout,
+    toggleItem.timeout
   );
 };
 
@@ -334,20 +353,20 @@ const updateClass = (element, targets, targetClass, active, timeout = null) => {
 };
 
 const activate = (element, targetClass, timeout = null) => {
-  addClass(element, targetClass);
+  element.classList.add(targetClass);
   if (timeout) {
-    addClass(element, "activate");
+    element.classList.add("activate");
     setTimeout(() => {
-      removeClass(element, "activate");
+      element.classList.remove("activate");
     }, timeout);
   }
 };
 const deactivate = (element, targetClass, timeout = null) => {
-  removeClass(element, targetClass);
+  element.classList.remove(targetClass);
   if (timeout) {
-    addClass(element, "deactivate");
+    element.classList.add("deactivate");
     setTimeout(() => {
-      removeClass(element, "deactivate");
+      element.classList.remove("deactivate");
     }, timeout);
   }
 };
@@ -357,33 +376,11 @@ const activateSticky = (sticky, activate = true) => {
   sticky.active = activate;
   if (activate) {
     sticky.spacer.style.height = sticky.showSpacer ? sticky.height + "px" : "";
-    addClass(sticky.element, "sticky");
+    sticky.element.classList.add("sticky");
   } else {
     sticky.spacer.style.height = "";
-    removeClass(sticky.element, "sticky");
+    sticky.element.classList.remove("sticky");
   }
-};
-// Add class to an element
-const addClass = (element, className) => {
-  const classes = element.className ? element.className.split(" ") : [];
-  if (classes.indexOf(className) === -1) {
-    classes.push(className);
-    element.className = classes.join(" ");
-  }
-};
-// Remove class to element
-const removeClass = (element, className) => {
-  const classes = element.className ? element.className.split(" ") : [];
-  const index = classes.indexOf(className);
-  if (index !== -1) {
-    classes.splice(index, 1);
-    element.className = classes.join(" ");
-  }
-};
-// Check if an element has a class
-const hasClass = (element, className) => {
-  const classes = element.className ? element.className.split(" ") : [];
-  return classes.indexOf(className) !== -1;
 };
 
 const getScrollPosition = () => {
@@ -392,6 +389,16 @@ const getScrollPosition = () => {
   if (bodyTop > elementTop) return bodyTop;
   return elementTop;
 };
+
+function getHTMLElements(identifier: string) {
+  const returnList: Array<HTMLElement> = [];
+  document.querySelectorAll(identifier).forEach((element) => {
+    if (element instanceof HTMLElement) {
+      returnList.push(element);
+    }
+  });
+  return returnList;
+}
 
 export function debounce(func: Function, timeout = 300) {
   let timer: number;
@@ -403,6 +410,20 @@ export function debounce(func: Function, timeout = 300) {
   };
 }
 
-window.addEventListener("resize", onResize);
+export function getDataValue(
+  value: string | undefined,
+  defaultValue: number
+): number {
+  if (!value) {
+    return defaultValue;
+  }
+  const numVal = parseInt(value);
+  return Number.isInteger(numVal) ? numVal : defaultValue;
+}
+
+window.addEventListener(
+  "resize",
+  debounce(() => onResize(), 50)
+);
 window.addEventListener("scroll", onScroll);
 window.addEventListener("load", menuInit);
