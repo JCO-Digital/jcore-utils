@@ -18,16 +18,17 @@ interface ScrollItem {
 
 interface ToggleSource {
   element: HTMLElement;
-  targetClass: string;
+  timeout: number;
 }
 
 interface ToggleTarget {
   element: HTMLElement;
-  active: boolean;
+  targetClass: string;
   click: ToggleSource[];
   hover: ToggleSource[];
   focus: ToggleSource[];
-  timeout: ReturnType<typeof setTimeout>;
+  closeTimer: number;
+  timeout: number;
   group: string[];
 }
 
@@ -58,7 +59,7 @@ const menuInit = () => {
   onResize();
 };
 
-const getSticky = () => {
+function getSticky() {
   getHTMLElements("[data-jsticky]").forEach((sticky, i) => {
     if (!sticky.parentNode) {
       return;
@@ -66,7 +67,6 @@ const getSticky = () => {
     const spacer = document.createElement("div");
     spacer.id = "spacer_" + i;
     sticky.parentNode.insertBefore(spacer, sticky);
-    console.debug(sticky.dataset);
     jcoreSticky.push({
       element: sticky,
       spacer: spacer,
@@ -78,14 +78,16 @@ const getSticky = () => {
       active: false,
     });
   });
-};
-const getScroll = () => {
+  console.debug("jcoreSticky elements found: ", jcoreSticky.length);
+}
+
+function getScroll() {
   getHTMLElements("[data-jscroll]").forEach((scroll) => {
     scroll.classList.add("scrollActive");
     const threshold = getNumericDataValue(scroll.dataset.threshold, 75);
     const scrollStart = getNumericDataValue(
       scroll.dataset.scrollstart,
-      threshold
+      threshold,
     );
     scroll.classList.add("jcoreLoading");
     jcoreScroll.push({
@@ -95,8 +97,10 @@ const getScroll = () => {
       loading: true,
     });
   });
-};
-const getToggle = () => {
+  console.debug("jcoreScroll elements found: ", jcoreScroll.length);
+}
+
+function getToggle() {
   getHTMLElements("[data-jtoggle]").forEach((toggle) => {
     const targetClass = toggle.dataset.class ? toggle.dataset.class : "toggle";
     const timeout = getNumericDataValue(toggle.dataset.timeout, 200);
@@ -104,7 +108,7 @@ const getToggle = () => {
     const targets = getHTMLTargets(toggle, "jtoggle");
     const source = {
       element: toggle,
-      targetClass: targetClass,
+      timeout: timeout,
     };
 
     targets.forEach((target) => {
@@ -113,15 +117,16 @@ const getToggle = () => {
       // Create a empty target.
       let item: ToggleTarget = {
         element: target,
-        active: false,
+        targetClass: targetClass,
         click: [],
         hover: [],
         focus: [],
+        closeTimer: 0,
         timeout: 0,
         group: [],
       };
       jcoreToggle.forEach((t) => {
-        if (target === t.element) {
+        if (target === t.element && targetClass === t.targetClass) {
           // Overwrite the empty target if found.
           item = t;
           found = true;
@@ -146,57 +151,110 @@ const getToggle = () => {
         // Add group if defined, and not in list.
         item.group.push(group);
       }
-      if (timeout > item.timeout) {
-        // Set timeout if larger that old value.
-        item.timeout = timeout;
-      }
 
       if (!found) {
         // Target not found in list exist, add it.
         jcoreToggle.push(item);
       }
     });
-
-    setToggleTargets();
-
-    updateClass(
-      toggle,
-      targets,
-      targetClass,
-      toggle.classList.contains(targetClass)
-    );
   });
-};
+  console.debug("jcoreToggle elements found: ", jcoreToggle.length);
+  setToggleTargets();
+}
 
 function setToggleTargets() {
   jcoreToggle.forEach((target) => {
-    // Set click handlers.
+    const activated = target.element.classList.contains(target.targetClass);
+
+    // Initilize element classes on load.
+    updateElement(target, activated);
+
+    /**
+     * Set click handlers.
+     */
     target.click.forEach((source) => {
+      source.element.ariaExpanded = activated ? "true" : "false";
+      if (target.element.id) {
+        source.element.setAttribute("aria-controls", target.element.id);
+      }
       source.element.addEventListener("click", () => {
         toggleHandler(target, source);
       });
     });
-    // Set hover handlers.
+
+    /**
+     * Set hover handlers.
+     */
     target.hover.forEach((source) => {
       source.element.addEventListener("mouseenter", () => {
-        toggleHandler(target, source, true);
+        timedOpen(target, source);
       });
       source.element.addEventListener("mouseleave", () => {
-        toggleHandler(target, source, false);
+        timedClose(target, source);
       });
     });
-    // Set focus handlers.
+
+    // Set handlers for target element.
+    target.element.addEventListener("mouseenter", () => {
+      timedOpen(target);
+    });
+    target.element.addEventListener("mouseleave", () => {
+      timedClose(target);
+    });
+
+    /**
+     * Set focus handlers.
+     */
     target.focus.forEach((source) => {
       source.element.addEventListener("focus", () => {
-        toggleHandler(target, source, true);
+        timedOpen(target, source);
       });
       source.element.addEventListener("blur", () => {
-        toggleHandler(target, source, false);
+        timedClose(target, source);
       });
     });
+    if (target.focus.length) {
+      // Set listeners to a
+      target.element
+        .querySelectorAll(
+          'a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])',
+        )
+        .forEach((element) => {
+          element.addEventListener("focus", () => {
+            timedOpen(target);
+          });
+          element.addEventListener("blur", () => {
+            timedClose(target);
+          });
+        });
+    }
   });
 }
 
+function timedOpen(
+  target: ToggleTarget,
+  source: ToggleSource | undefined = undefined,
+) {
+  if (target.closeTimer) {
+    clearTimeout(target.closeTimer);
+    target.closeTimer = 0;
+  }
+  if (source) {
+    target.timeout = source.timeout;
+    toggleHandler(target, source, true);
+  }
+}
+function timedClose(
+  target: ToggleTarget,
+  source: ToggleSource | undefined = undefined,
+) {
+  if (!source) {
+    source = { element: target.element, timeout: target.timeout };
+  }
+  target.closeTimer = setTimeout(() => {
+    toggleHandler(target, source, false);
+  }, 50);
+}
 const getTrigger = () => {
   getHTMLElements("[data-jtrigger]").forEach((trigger) => {
     const targets = getHTMLTargets(trigger, "jtrigger");
@@ -209,11 +267,11 @@ const getTrigger = () => {
 };
 
 // Check for stickiness in menus
-const onScroll = () => {
+function onScroll() {
   scrollHandler();
   checkStickyPos();
   checkScrollPos();
-};
+}
 
 const scrollHandler = () => {
   jcoreScrollPos.last = jcoreScrollPos.current;
@@ -233,8 +291,7 @@ const scrollHandler = () => {
   }
 };
 // Update info about menu placement on resize
-const onResize = () => {
-  console.debug("Resize");
+function onResize() {
   jcoreSticky.forEach((sticky) => {
     const pos = getPos(sticky.spacer);
     sticky.posY = pos.y;
@@ -244,7 +301,7 @@ const onResize = () => {
   });
   checkStickyPos();
   checkScrollPos();
-};
+}
 
 const checkStickyPos = () => {
   // Check Sticky
@@ -262,7 +319,7 @@ const checkScrollPos = () => {
   jcoreScroll.forEach((scroll) => {
     scroll.element.style.setProperty(
       "--jutils-height",
-      scroll.element.clientHeight + "px"
+      scroll.element.clientHeight + "px",
     );
     if (jcoreScrollPos.current < scroll.scrollStart) {
       scroll.element.classList.add("scrollTop");
@@ -311,86 +368,53 @@ const getPos = (el) => {
 function toggleHandler(
   target: ToggleTarget,
   source: ToggleSource,
-  forcedState: boolean | undefined = undefined
+  forcedState: boolean | undefined = undefined,
 ) {
   const activate =
     forcedState === undefined
-      ? !target.element.classList.contains(source.targetClass)
+      ? !target.element.classList.contains(target.targetClass)
       : forcedState;
+  if (source.element.ariaExpanded !== null) {
+    source.element.ariaExpanded = activate ? "true" : "false";
+  }
+
   if (activate && target.group) {
     // If item has a group set, look for all other group elements.
     jcoreToggle.forEach((item) => {
-      if (
-        item.group === toggleItem.group &&
-        item.element.classList.contains(item.targetClass)
-      ) {
+      if (arrayMatch(item.group, target.group)) {
         // Deactivate all active group elements.
-        updateClass(
-          item.element,
-          item.targets,
-          item.targetClass,
-          false,
-          item.timeout
-        );
+        updateElement(item, false);
       }
     });
   }
-  updateClass(
-    toggleItem.element,
-    toggleItem.targets,
-    toggleItem.targetClass,
-    activate,
-    toggleItem.timeout
+  updateElement(target, activate, source.timeout);
+}
+
+function updateElement(
+  target: ToggleTarget,
+  activate: boolean,
+  timeout: number = 0,
+) {
+  const activeClass = activate ? "activate" : "deactivate";
+  [target, ...target.click, ...target.focus, ...target.hover].forEach(
+    (item) => {
+      if (activate) {
+        item.element.classList.add(target.targetClass);
+      } else {
+        item.element.classList.remove(target.targetClass);
+      }
+      if (timeout) {
+        item.element.classList.add(activeClass);
+        setTimeout(() => {
+          item.element.classList.remove(activeClass);
+        }, timeout);
+      }
+    },
   );
 }
 
-// Update the toggle class for all elements
-const updateClass = (
-  element: HTMLElement,
-  targets: HTMLElement[],
-  targetClass: string,
-  active: boolean,
-  timeout: number = 0
-) => {
-  element.setAttribute("aria-expanded", active ? "true" : "false");
-  [element, ...targets].forEach((target) => {
-    if (active) {
-      activate(target, targetClass, timeout);
-    } else {
-      deactivate(target, targetClass, timeout);
-    }
-  });
-};
-
-const activate = (
-  element: HTMLElement,
-  targetClass: string,
-  timeout: number
-) => {
-  element.classList.add(targetClass);
-  if (timeout) {
-    element.classList.add("activate");
-    setTimeout(() => {
-      element.classList.remove("activate");
-    }, timeout);
-  }
-};
-const deactivate = (
-  element: HTMLElement,
-  targetClass: string,
-  timeout: number
-) => {
-  element.classList.remove(targetClass);
-  if (timeout) {
-    element.classList.add("deactivate");
-    setTimeout(() => {
-      element.classList.remove("deactivate");
-    }, timeout);
-  }
-};
-
 // Activate / Deactivate Stickiness
-const activateSticky = (sticky, activate = true) => {
+const activateSticky = (sticky: StickyItem, activate = true) => {
   sticky.active = activate;
   if (activate) {
     sticky.spacer.style.height = sticky.showSpacer ? sticky.height + "px" : "";
@@ -431,10 +455,28 @@ function getHTMLTargets(element: HTMLElement, key: string) {
         returnList.push(parent);
       }
     } else {
-      returnList.concat(getHTMLElements(identifier));
+      getHTMLElements(identifier).forEach((item) => {
+        returnList.push(item);
+      });
     }
   });
   return returnList;
+}
+
+/**
+ * Check if first and second arrays share one or more elements.
+ *
+ * @param first First array.
+ * @param second Second array.
+ */
+
+function arrayMatch(first: string[], second: string[]) {
+  for (const item of first) {
+    if (second.includes(item)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function debounce(func: Function, timeout = 300) {
@@ -449,7 +491,7 @@ export function debounce(func: Function, timeout = 300) {
 
 export function getNumericDataValue(
   value: string | undefined,
-  defaultValue: number
+  defaultValue: number,
 ): number {
   if (!value) {
     return defaultValue;
@@ -460,7 +502,7 @@ export function getNumericDataValue(
 
 window.addEventListener(
   "resize",
-  debounce(() => onResize(), 50)
+  debounce(() => onResize(), 50),
 );
 window.addEventListener("scroll", onScroll);
 window.addEventListener("load", menuInit);
