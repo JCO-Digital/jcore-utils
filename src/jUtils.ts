@@ -7,4 +7,4 @@ function utilsInit() {
   toggleInit();
 }
 
-window.addEventListener("load", utilsInit);
+document.addEventListener("DOMContentLoaded", utilsInit);
