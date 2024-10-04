@@ -27,6 +27,7 @@ export interface ToggleTarget {
   click: ToggleSource[];
   hover: ToggleSource[];
   focus: ToggleSource[];
+  openTimer: number;
   closeTimer: number;
   timeout: number;
   group: string[];

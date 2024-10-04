@@ -15,7 +15,7 @@ export function toggleInit() {
 export default function getToggle() {
   getHTMLElements("[data-jtoggle]").forEach((toggle) => {
     const targetClass = toggle.dataset.class ? toggle.dataset.class : "toggle";
-    const timeout = getNumericDataValue(toggle.dataset.timeout, 200);
+    const timeout = getNumericDataValue(toggle.dataset.timeout, -1);
     const group = toggle.dataset.group;
     const targets = getHTMLTargets(toggle, "jtoggle");
     const source = {
@@ -34,7 +34,7 @@ export default function getToggle() {
         hover: [],
         focus: [],
         closeTimer: 0,
-        timeout: 0,
+        timeout: -1,
         group: [],
       };
       jcoreToggle.forEach((t) => {
@@ -45,6 +45,18 @@ export default function getToggle() {
           return;
         }
       });
+
+      // Check for non matching timeouts.
+      if (item.timeout > -1 && timeout != item.timeout) {
+        console.warn(
+          `Two different timeouts given. Both ${item.timeout} and ${timeout} for same target.`,
+        );
+      }
+
+      // Use the biggest defined timeout.
+      if (timeout > item.timeout) {
+        item.timeout = timeout;
+      }
 
       let handler = false;
       if ("jhover" in toggle.dataset) {
@@ -87,6 +99,9 @@ function getTrigger() {
 
 function setToggleTargets() {
   jcoreToggle.forEach((target) => {
+    if (target.timeout < 0) {
+      target.timeout = 200;
+    }
     const activated = target.element.classList.contains(target.targetClass);
 
     // Initilize element classes on load.
@@ -131,8 +146,16 @@ function setToggleTargets() {
      * Set focus handlers.
      */
     target.focus.forEach((source) => {
+      let allowFocus = true;
+      source.element.addEventListener("mousedown", () => {
+        // Stop focus handler from triggering on mouse click.
+        allowFocus = false;
+      });
       source.element.addEventListener("focus", () => {
-        timedOpen(target, source);
+        if (allowFocus) {
+          timedOpen(target, source);
+        }
+        allowFocus = true;
       });
       source.element.addEventListener("blur", () => {
         timedClose(target, source);
@@ -145,8 +168,16 @@ function setToggleTargets() {
           'a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])',
         )
         .forEach((element) => {
+          let allowFocus = true;
+          element.addEventListener("mousedown", () => {
+            // Stop focus handler from triggering on mouse click.
+            allowFocus = false;
+          });
           element.addEventListener("focus", () => {
-            timedOpen(target);
+            if (allowFocus) {
+              timedOpen(target);
+            }
+            allowFocus = true;
           });
           element.addEventListener("blur", () => {
             timedClose(target);
@@ -164,18 +195,12 @@ function timedOpen(
     clearTimeout(target.closeTimer);
     target.closeTimer = 0;
   }
-  if (source) {
-    target.timeout = source.timeout;
-    toggleHandler(target, source, true);
-  }
+  toggleHandler(target, source, true);
 }
 function timedClose(
   target: ToggleTarget,
   source: ToggleSource | undefined = undefined,
 ) {
-  if (!source) {
-    source = { element: target.element, timeout: target.timeout };
-  }
   target.closeTimer = setTimeout(() => {
     toggleHandler(target, source, false);
   }, 50);
@@ -184,14 +209,14 @@ function timedClose(
 // Handle the toggle action
 function toggleHandler(
   target: ToggleTarget,
-  source: ToggleSource,
+  source: ToggleSource | undefined = undefined,
   forcedState: boolean | undefined = undefined,
 ) {
   const activate =
     forcedState === undefined
       ? !target.element.classList.contains(target.targetClass)
       : forcedState;
-  if (source.element.ariaExpanded !== null) {
+  if (source && source.element.ariaExpanded !== null) {
     source.element.ariaExpanded = activate ? "true" : "false";
   }
 
@@ -204,14 +229,10 @@ function toggleHandler(
       }
     });
   }
-  updateElement(target, activate, source.timeout);
+  updateElement(target, activate);
 }
 
-function updateElement(
-  target: ToggleTarget,
-  activate: boolean,
-  timeout: number = 0,
-) {
+function updateElement(target: ToggleTarget, activate: boolean) {
   const activeClass = activate ? "activate" : "deactivate";
   [target, ...target.click, ...target.focus, ...target.hover].forEach(
     (item) => {
@@ -220,11 +241,11 @@ function updateElement(
       } else {
         item.element.classList.remove(target.targetClass);
       }
-      if (timeout) {
+      if (target.timeout) {
         item.element.classList.add(activeClass);
         setTimeout(() => {
           item.element.classList.remove(activeClass);
-        }, timeout);
+        }, target.timeout);
       }
     },
   );

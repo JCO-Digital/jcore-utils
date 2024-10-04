@@ -4,7 +4,7 @@
   "description": "JCORE Utils (jUtils) is a collection of helper scripts",
   "main": "dist/index.js",
   "scripts": {
-    "build": "esbuild src/jUtils.ts --bundle --minify --outfile=dist/index.js --platform=browser --format=iife --target=es2022",
+    "build": "esbuild src/index.ts --bundle --minify --outfile=dist/index.js --platform=browser --format=iife --target=es2022",
     "watch": "pnpm run build --watch",
     "format": "prettier --write src/**/*.ts",
     "lint": "prettier --check src/**/*.ts",
@@ -13,7 +13,7 @@
     "preversion": "pnpm run lint && pnpm run build",
     "postversion": "git push && git push --tags && pnpm publish --access public"
   },
-  "dependencies": {
+  "devDependencies": {
     "prettier": "^3.2.5",
     "esbuild": "^0.21.2"
   },
