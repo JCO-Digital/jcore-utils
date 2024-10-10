@@ -141,10 +141,11 @@ function getPos(el) {
 function activateSticky(sticky: StickyItem, activate = true) {
   sticky.active = activate;
   if (activate) {
-    sticky.spacer.style.height = sticky.showSpacer ? sticky.height + "px" : "";
+    setSpacerHeight(sticky);
+    sticky.spacer.style.display = "block";
     sticky.element.classList.add("sticky");
   } else {
-    sticky.spacer.style.height = "";
+    sticky.spacer.style.display = "none";
     sticky.element.classList.remove("sticky");
   }
 }
@@ -164,9 +165,14 @@ function onResize() {
     sticky.posX = pos.x;
     sticky.height = sticky.element.offsetHeight;
     sticky.width = sticky.element.offsetWidth;
+    setSpacerHeight(sticky);
   });
   checkStickyPos();
   checkScrollPos();
+}
+
+function setSpacerHeight(sticky: StickyItem) {
+  sticky.spacer.style.height = sticky.showSpacer ? sticky.height + "px" : "";
 }
 
 // Check for stickiness in menus
