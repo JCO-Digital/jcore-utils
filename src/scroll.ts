@@ -142,10 +142,11 @@ function activateSticky(sticky: StickyItem, activate = true) {
   sticky.active = activate;
   if (activate) {
     setSpacerHeight(sticky);
-    sticky.spacer.style.display = "block";
+    sticky.element.classList.remove("hidden");
     sticky.element.classList.add("sticky");
   } else {
-    sticky.spacer.style.display = "none";
+    sticky.spacer.style.height = "0";
+    sticky.element.classList.add("hidden");
     sticky.element.classList.remove("sticky");
   }
 }
