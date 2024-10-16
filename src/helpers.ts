@@ -49,3 +49,23 @@ export function debounce(func: Function, timeout = 300) {
     }, timeout);
   };
 }
+
+export function isFocusable(el: HTMLElement) {
+  const cs = window.getComputedStyle(el, null);
+  if (
+    cs.getPropertyValue("visibility") == "hidden" ||
+    cs.getPropertyValue("display") == "none"
+  )
+    return false;
+  const natively =
+    'a[href], area[href], details, iframe, :is(button, input:not([type="hidden"]), select, textarea)';
+
+  if (
+    el.matches(natively) ||
+    (el.hasAttribute("tabindex") &&
+      parseInt(el.getAttribute("tabindex") ?? "-1") >= 0) ||
+    el.isContentEditable
+  )
+    return true;
+  return false;
+}

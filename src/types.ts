@@ -24,10 +24,10 @@ export interface ToggleSource {
 export interface ToggleTarget {
   element: HTMLElement;
   targetClass: string;
+  type: EventType;
   click: ToggleSource[];
   hover: ToggleSource[];
   focus: ToggleSource[];
-  openTimer: number;
   closeTimer: number;
   timeout: number;
   group: string[];
@@ -38,4 +38,11 @@ export interface ScrollPos {
   last: number;
   up: number | null;
   down: number | null;
+}
+
+export enum EventType {
+  None,
+  Hover,
+  Focus,
+  Click,
 }

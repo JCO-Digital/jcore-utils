@@ -2,8 +2,9 @@ import {
   getHTMLTargets,
   getHTMLElements,
   getNumericDataValue,
+  isFocusable,
 } from "./helpers";
-import { ToggleSource, ToggleTarget } from "./types";
+import { EventType, ToggleSource, ToggleTarget } from "./types";
 
 const jcoreToggle: ToggleTarget[] = [];
 
@@ -30,6 +31,7 @@ export default function getToggle() {
       let item: ToggleTarget = {
         element: target,
         targetClass: targetClass,
+        type: EventType.None,
         click: [],
         hover: [],
         focus: [],
@@ -116,7 +118,7 @@ function setToggleTargets() {
         source.element.setAttribute("aria-controls", target.element.id);
       }
       source.element.addEventListener("click", () => {
-        toggleHandler(target, source);
+        toggleHandler(target, EventType.Click, source);
       });
     });
 
@@ -125,20 +127,20 @@ function setToggleTargets() {
      */
     target.hover.forEach((source) => {
       source.element.addEventListener("mouseenter", () => {
-        timedOpen(target, source);
+        timedOpen(target, EventType.Hover, source);
       });
       source.element.addEventListener("mouseleave", () => {
-        timedClose(target, source);
+        timedClose(target, EventType.Hover, source);
       });
     });
 
     if (target.hover.length) {
       // Set hover handlers for target element if it has hover sources.
       target.element.addEventListener("mouseenter", () => {
-        timedOpen(target);
+        timedOpen(target, EventType.Hover);
       });
       target.element.addEventListener("mouseleave", () => {
-        timedClose(target);
+        timedClose(target, EventType.Hover);
       });
     }
 
@@ -146,20 +148,22 @@ function setToggleTargets() {
      * Set focus handlers.
      */
     target.focus.forEach((source) => {
-      let allowFocus = true;
-      source.element.addEventListener("mousedown", () => {
-        // Stop focus handler from triggering on mouse click.
-        allowFocus = false;
-      });
-      source.element.addEventListener("focus", () => {
-        if (allowFocus) {
-          timedOpen(target, source);
-        }
-        allowFocus = true;
-      });
-      source.element.addEventListener("blur", () => {
-        timedClose(target, source);
-      });
+      if (isFocusable(source.element)) {
+        let allowFocus = true;
+        source.element.addEventListener("mousedown", () => {
+          // Stop focus handler from triggering on mouse click.
+          allowFocus = false;
+        });
+        source.element.addEventListener("focus", () => {
+          if (allowFocus) {
+            timedOpen(target, EventType.Focus, source);
+          }
+          allowFocus = true;
+        });
+        source.element.addEventListener("blur", () => {
+          timedClose(target, EventType.Focus, source);
+        });
+      }
     });
     if (target.focus.length) {
       // Set listeners to a
@@ -175,12 +179,12 @@ function setToggleTargets() {
           });
           element.addEventListener("focus", () => {
             if (allowFocus) {
-              timedOpen(target);
+              timedOpen(target, EventType.Focus);
             }
             allowFocus = true;
           });
           element.addEventListener("blur", () => {
-            timedClose(target);
+            timedClose(target, EventType.Focus);
           });
         });
     }
@@ -189,26 +193,29 @@ function setToggleTargets() {
 
 function timedOpen(
   target: ToggleTarget,
+  type: EventType,
   source: ToggleSource | undefined = undefined,
 ) {
   if (target.closeTimer) {
     clearTimeout(target.closeTimer);
     target.closeTimer = 0;
   }
-  toggleHandler(target, source, true);
+  toggleHandler(target, type, source, true);
 }
 function timedClose(
   target: ToggleTarget,
+  type: EventType,
   source: ToggleSource | undefined = undefined,
 ) {
   target.closeTimer = setTimeout(() => {
-    toggleHandler(target, source, false);
+    toggleHandler(target, type, source, false);
   }, 50);
 }
 
 // Handle the toggle action
 function toggleHandler(
   target: ToggleTarget,
+  type: EventType,
   source: ToggleSource | undefined = undefined,
   forcedState: boolean | undefined = undefined,
 ) {
@@ -220,15 +227,21 @@ function toggleHandler(
     source.element.ariaExpanded = activate ? "true" : "false";
   }
 
+  if (type < target.type) {
+    return;
+  }
+
   if (activate && target.group) {
     // If item has a group set, look for all other group elements.
     jcoreToggle.forEach((item) => {
       if (arrayMatch(item.group, target.group)) {
         // Deactivate all active group elements.
         updateElement(item, false);
+        item.type = EventType.None;
       }
     });
   }
+  target.type = activate ? type : EventType.None;
   updateElement(target, activate);
 }
 
