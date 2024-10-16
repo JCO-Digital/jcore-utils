@@ -152,20 +152,7 @@ function setToggleTargets() {
      */
     target.focus.forEach((source) => {
       if (isFocusable(source.element)) {
-        let allowFocus = true;
-        source.element.addEventListener("mousedown", () => {
-          // Stop focus handler from triggering on mouse click.
-          allowFocus = false;
-        });
-        source.element.addEventListener("focus", () => {
-          if (allowFocus) {
-            timedOpen(target, EventType.Focus, source);
-          }
-          allowFocus = true;
-        });
-        source.element.addEventListener("blur", () => {
-          timedClose(target, EventType.Focus, source);
-        });
+        setFocusHandlers(source.element, target, source);
       }
     });
     if (target.focus.length) {
@@ -175,22 +162,34 @@ function setToggleTargets() {
           'a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])',
         )
         .forEach((element) => {
-          let allowFocus = true;
-          element.addEventListener("mousedown", () => {
-            // Stop focus handler from triggering on mouse click.
-            allowFocus = false;
-          });
-          element.addEventListener("focus", () => {
-            if (allowFocus) {
-              timedOpen(target, EventType.Focus);
-            }
-            allowFocus = true;
-          });
-          element.addEventListener("blur", () => {
-            timedClose(target, EventType.Focus);
-          });
+          if (element instanceof HTMLElement) {
+            setFocusHandlers(element, target);
+          }
         });
     }
+  });
+}
+
+function setFocusHandlers(
+  element: HTMLElement,
+  target: ToggleTarget,
+  source: ToggleSource | undefined = undefined,
+) {
+  let allowFocus = true;
+  if (element.hasAttribute("href")) {
+    element.addEventListener("mousedown", () => {
+      // Stop focus handler from triggering on mouse click.
+      allowFocus = false;
+    });
+  }
+  element.addEventListener("focus", () => {
+    if (allowFocus) {
+      timedOpen(target, EventType.Focus, source);
+    }
+    allowFocus = true;
+  });
+  element.addEventListener("blur", () => {
+    timedClose(target, EventType.Focus, source);
   });
 }
 
