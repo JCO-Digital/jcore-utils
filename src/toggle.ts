@@ -104,7 +104,7 @@ function setToggleTargets() {
     if (target.timeout < 0) {
       target.timeout = 200;
     }
-    const activated = target.element.classList.contains(target.targetClass);
+    let activated = target.element.classList.contains(target.targetClass);
 
     // Initilize element classes on load.
     updateElement(target, activated);
@@ -117,8 +117,11 @@ function setToggleTargets() {
       if (target.element.id) {
         source.element.setAttribute("aria-controls", target.element.id);
       }
+      source.element.addEventListener("mousedown", () => {
+        activated = !target.element.classList.contains(target.targetClass);
+      });
       source.element.addEventListener("click", () => {
-        toggleHandler(target, EventType.Click, source);
+        toggleHandler(target, EventType.Click, activated, source);
       });
     });
 
@@ -200,7 +203,7 @@ function timedOpen(
     clearTimeout(target.closeTimer);
     target.closeTimer = 0;
   }
-  toggleHandler(target, type, source, true);
+  toggleHandler(target, type, true, source);
 }
 function timedClose(
   target: ToggleTarget,
@@ -208,7 +211,7 @@ function timedClose(
   source: ToggleSource | undefined = undefined,
 ) {
   target.closeTimer = setTimeout(() => {
-    toggleHandler(target, type, source, false);
+    toggleHandler(target, type, false, source);
   }, 50);
 }
 
@@ -216,13 +219,9 @@ function timedClose(
 function toggleHandler(
   target: ToggleTarget,
   type: EventType,
+  activate: boolean,
   source: ToggleSource | undefined = undefined,
-  forcedState: boolean | undefined = undefined,
 ) {
-  const activate =
-    forcedState === undefined
-      ? !target.element.classList.contains(target.targetClass)
-      : forcedState;
   if (source && source.element.ariaExpanded !== null) {
     source.element.ariaExpanded = activate ? "true" : "false";
   }
