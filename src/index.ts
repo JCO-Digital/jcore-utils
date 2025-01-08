@@ -1,3 +1,4 @@
+import { heightInit } from "./height";
 import { scrollInit } from "./scroll";
 import { toggleInit } from "./toggle";
 
@@ -5,6 +6,7 @@ import { toggleInit } from "./toggle";
 function utilsInit() {
   scrollInit();
   toggleInit();
+  heightInit();
 }
 
 document.addEventListener("DOMContentLoaded", utilsInit);

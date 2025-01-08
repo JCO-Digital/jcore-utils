@@ -16,6 +16,12 @@ export interface ScrollItem {
   loading: boolean;
 }
 
+export interface HeightItem {
+  element: HTMLElement;
+  target: HTMLElement[];
+  name: string;
+}
+
 export interface ToggleSource {
   element: HTMLElement;
   timeout: number;
