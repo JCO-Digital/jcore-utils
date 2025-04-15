@@ -93,7 +93,9 @@ function getTrigger() {
     const targets = getHTMLTargets(trigger, "jtrigger");
     trigger.addEventListener("click", () => {
       targets.forEach((target) => {
-        target.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+        target.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
+        );
         target.click();
       });
     });
