@@ -1,6 +1,6 @@
 {
   "name": "@jcodigital/jcore-utils",
-  "version": "0.7.3-dev.1",
+  "version": "0.7.3-dev.2",
   "description": "JCORE Utils is a collection of helper scripts",
   "main": "dist/index.js",
   "exports": {
