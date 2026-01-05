@@ -18,7 +18,7 @@ export function scrollInit() {
 }
 
 function getSticky() {
-  getHTMLElements("[data-jsticky]").forEach((sticky, i) => {
+  getHTMLElements("[data-jsticky='true']").forEach((sticky, i) => {
     if (!sticky.parentNode) {
       return;
     }
@@ -40,7 +40,7 @@ function getSticky() {
 }
 
 function getScroll() {
-  getHTMLElements("[data-jscroll]").forEach((scroll) => {
+  getHTMLElements("[data-jscroll='true']").forEach((scroll) => {
     scroll.classList.add("scrollActive");
     const threshold = getNumericDataValue(scroll.dataset.threshold, 75);
     const scrollStart = getNumericDataValue(
