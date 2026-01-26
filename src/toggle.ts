@@ -123,6 +123,11 @@ function setToggleTargets() {
       source.element.addEventListener("mousedown", () => {
         activated = !target.element.classList.contains(target.targetClass);
       });
+      source.element.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          activated = !target.element.classList.contains(target.targetClass);
+        }
+      });
       source.element.addEventListener("click", () => {
         toggleHandler(target, EventType.Click, activated, source);
       });
