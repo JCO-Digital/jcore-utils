@@ -7,6 +7,8 @@ export interface StickyItem {
   height: number;
   width: number;
   active: boolean;
+  /** The spacer height last written, so an unchanged one is not rewritten. */
+  spacerHeight: string | null;
 }
 
 export interface ScrollItem {
@@ -14,6 +16,16 @@ export interface ScrollItem {
   threshold: number;
   scrollStart: number;
   loading: boolean;
+  /** The element's last measured `clientHeight`. */
+  height: number;
+  /** The `--jutils-height` last written, in px. */
+  renderedHeight: number | null;
+  /** The scroll classes as last written; null until first set. */
+  state: {
+    scrollTop: boolean | null;
+    scrollUp: boolean | null;
+    scrollDown: boolean | null;
+  };
 }
 
 export interface HeightItem {
